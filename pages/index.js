@@ -58,23 +58,30 @@ function AuthView() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    try {
-      if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-     } else {
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) throw error
-    alert('Account created! Please sign in.')
-    setMode('login')
-  }
-    } catch (error) {
-      setError(error.message)
+ const handleSubmit = async (e) => {
+  e.preventDefault()
+  setError('')
+  try {
+    if (mode === 'login') {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+    } else {
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      })
+      if (error) throw error
+      // Auto-login after signup
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) throw signInError
     }
+  } catch (error) {
+    setError(error.message)
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center p-4">
