@@ -10,18 +10,15 @@ const supabase = createClient(
 export default function Home() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState('auth')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       setLoading(false)
-      if (session?.user) setView('setup')
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) setView('setup')
     })
 
     return () => subscription.unsubscribe()
@@ -39,16 +36,8 @@ export default function Home() {
     return <AuthView />
   }
 
-  if (view === 'setup') {
-    return <SetupView user={user} onComplete={() => setView('app')} onSignOut={() => {
-      supabase.auth.signOut()
-      setView('auth')
-    }} />
-  }
-
   return <MainApp user={user} onSignOut={() => {
     supabase.auth.signOut()
-    setView('auth')
   }} />
 }
 
@@ -378,6 +367,7 @@ function MainApp({ user, onSignOut }) {
   const [showGiveModal, setShowGiveModal] = useState(false)
   const [showRewardModal, setShowRewardModal] = useState(false)
   const [showBetModal, setShowBetModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -509,13 +499,46 @@ function MainApp({ user, onSignOut }) {
       .eq('id', couple.id)
   }
 
-  if (!couple) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center">
-        <div className="text-2xl text-purple-600">Loading...</div>
+ if (!couple) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+            Lovebux
+          </h1>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setShowSettingsModal(true)} 
+              className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+            >
+              <Users size={20} />
+              Settings
+            </button>
+            <button onClick={onSignOut} className="text-gray-600 hover:text-gray-800 flex items-center gap-2">
+              <LogOut size={20} />
+              Sign Out
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-8 shadow-2xl text-center">
+          <Heart className="mx-auto mb-4 text-pink-500" size={64} />
+          <h2 className="text-2xl font-bold mb-4">Welcome to Lovebux!</h2>
+          <p className="text-gray-600 mb-6">You're not in a relationship yet. Click Settings to create or join one.</p>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 px-8 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700"
+          >
+            Get Started
+          </button>
+        </div>
+
+        {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} />}
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   const myBalance = balances[user.id] || 0
   const partnerId = user.id === couple.partner1_id ? couple.partner2_id : couple.partner1_id
@@ -537,14 +560,23 @@ return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
-            Lovebux
-          </h1>
-          <button onClick={onSignOut} className="text-gray-600 hover:text-gray-800 flex items-center gap-2">
-            <LogOut size={20} />
-            Sign Out
-          </button>
-        </div>
+  <h1 className="text-3xl font-bold bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+    Lovebux
+  </h1>
+  <div className="flex items-center gap-3">
+    <button 
+      onClick={() => setShowSettingsModal(true)} 
+      className="text-gray-600 hover:text-gray-800 flex items-center gap-2"
+    >
+      <Users size={20} />
+      Settings
+    </button>
+    <button onClick={onSignOut} className="text-gray-600 hover:text-gray-800 flex items-center gap-2">
+      <LogOut size={20} />
+      Sign Out
+    </button>
+  </div>
+</div>
 
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-pink-200">
@@ -705,6 +737,7 @@ return (
       {showGiveModal && <GiveModal onClose={() => setShowGiveModal(false)} onGive={giveLovebux} />}
       {showRewardModal && <RewardModal onClose={() => setShowRewardModal(false)} coupleId={couple.id} />}
       {showBetModal && <BetModal onClose={() => setShowBetModal(false)} onBet={createBet} couple={couple} />}
+      {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} />}
     </div>
   )
 }
@@ -921,3 +954,265 @@ function BetModal({ onClose, onBet, couple }) {
   )
 }
 
+function SettingsModal({ user, couple, onClose }) {
+  const [showCreateMode, setShowCreateMode] = useState(false)
+  const [showJoinMode, setShowJoinMode] = useState(false)
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
+
+  const createCouple = async () => {
+    const newCode = generateCode()
+    const { data, error } = await supabase
+      .from('couples')
+      .insert({
+        partner1_id: user.id,
+        partner1_name: name,
+        pairing_code: newCode
+      })
+      .select()
+      .single()
+
+    if (!error) {
+      await supabase.from('balances').insert({
+        couple_id: data.id,
+        user_id: user.id,
+        balance: 100
+      })
+
+      const defaultRewards = [
+        { name: 'Date Night Choice', cost: 50, description: 'Pick the next date activity', category: 'Romance' },
+        { name: 'Cuddle Session', cost: 15, description: '30 min mandatory cuddle time', category: 'Romance' },
+        { name: 'Love Letter', cost: 40, description: 'Receive a handwritten love letter', category: 'Romance' },
+        { name: 'Breakfast in Bed', cost: 35, description: 'Get breakfast made and served', category: 'Food' },
+        { name: 'Movie Choice', cost: 20, description: 'Choose tonight\'s movie', category: 'Entertainment' },
+        { name: 'Dishes Pass', cost: 25, description: 'Skip doing dishes for a day', category: 'Chores' },
+      ]
+
+      for (const reward of defaultRewards) {
+        await supabase.from('rewards').insert({
+          couple_id: data.id,
+          ...reward
+        })
+      }
+
+      alert(`Relationship created! Share code: ${newCode}`)
+      setShowCreateMode(false)
+      onClose()
+    }
+  }
+
+  const joinCouple = async () => {
+    const { data: existingCouple } = await supabase
+      .from('couples')
+      .select('*')
+      .eq('pairing_code', code.toUpperCase())
+      .single()
+
+    if (!existingCouple || existingCouple.partner2_id) {
+      alert('Invalid or already used code!')
+      return
+    }
+
+    await supabase
+      .from('couples')
+      .update({
+        partner2_id: user.id,
+        partner2_name: name
+      })
+      .eq('id', existingCouple.id)
+
+    await supabase.from('balances').insert({
+      couple_id: existingCouple.id,
+      user_id: user.id,
+      balance: 100
+    })
+
+    alert('Successfully joined relationship!')
+    setShowJoinMode(false)
+    onClose()
+  }
+
+  const unlinkRelationship = async () => {
+    if (!confirm('Are you sure you want to unlink from this relationship? This cannot be undone.')) {
+      return
+    }
+
+    const isPartner1 = user.id === couple.partner1_id
+
+    if (isPartner1) {
+      // If partner1 is leaving and partner2 exists, make partner2 the new partner1
+      if (couple.partner2_id) {
+        await supabase
+          .from('couples')
+          .update({
+            partner1_id: couple.partner2_id,
+            partner1_name: couple.partner2_name,
+            partner2_id: null,
+            partner2_name: null
+          })
+          .eq('id', couple.id)
+      } else {
+        // If no partner2, delete the couple
+        await supabase.from('couples').delete().eq('id', couple.id)
+      }
+    } else {
+      // If partner2 is leaving, just remove them
+      await supabase
+        .from('couples')
+        .update({
+          partner2_id: null,
+          partner2_name: null
+        })
+        .eq('id', couple.id)
+    }
+
+    // Delete user's balance
+    await supabase
+      .from('balances')
+      .delete()
+      .eq('couple_id', couple.id)
+      .eq('user_id', user.id)
+
+    alert('Unlinked from relationship')
+    onClose()
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-purple-600">Settings</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+
+        {couple && !showCreateMode && !showJoinMode && (
+          <div className="space-y-4">
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Current Relationship</h4>
+              <p className="text-sm text-gray-600">
+                {couple.partner1_name} & {couple.partner2_name || '(Waiting for partner)'}
+              </p>
+              {couple.pairing_code && (
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 mb-1">Pairing Code:</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-lg font-bold text-purple-600">{couple.pairing_code}</span>
+                    <button
+                      onClick={() => copyToClipboard(couple.pairing_code)}
+                      className="p-1 hover:bg-purple-100 rounded"
+                    >
+                      {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} className="text-purple-600" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={unlinkRelationship}
+              className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
+            >
+              Unlink from Relationship
+            </button>
+          </div>
+        )}
+
+        {!couple && !showCreateMode && !showJoinMode && (
+          <div className="space-y-4">
+            <p className="text-gray-600 text-center mb-4">You're not in a relationship yet</p>
+            <button
+              onClick={() => setShowCreateMode(true)}
+              className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600"
+            >
+              Create New Relationship
+            </button>
+            <button
+              onClick={() => setShowJoinMode(true)}
+              className="w-full bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600"
+            >
+              Join Existing Relationship
+            </button>
+          </div>
+        )}
+
+        {showCreateMode && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                placeholder="Enter your name"
+              />
+            </div>
+            <button
+              onClick={createCouple}
+              disabled={!name.trim()}
+              className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 disabled:bg-gray-300"
+            >
+              Create Relationship
+            </button>
+            <button
+              onClick={() => setShowCreateMode(false)}
+              className="w-full text-gray-600 py-2"
+            >
+              Back
+            </button>
+          </div>
+        )}
+
+        {showJoinMode && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Name</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                placeholder="Enter your name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Pairing Code</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                className="w-full p-3 border rounded-lg uppercase"
+                placeholder="XXXXXX"
+                maxLength={6}
+              />
+            </div>
+            <button
+              onClick={joinCouple}
+              disabled={!name.trim() || code.length !== 6}
+              className="w-full bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600 disabled:bg-gray-300"
+            >
+              Join Relationship
+            </button>
+            <button
+              onClick={() => setShowJoinMode(false)}
+              className="w-full text-gray-600 py-2"
+            >
+              Back
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
