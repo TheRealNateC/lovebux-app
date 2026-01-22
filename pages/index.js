@@ -65,11 +65,12 @@ function AuthView() {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-      } else {
-        const { error } = await supabase.auth.signUp({ email, password })
-        if (error) throw error
-        alert('Check your email for the confirmation link!')
-      }
+     } else {
+    const { error } = await supabase.auth.signUp({ email, password })
+    if (error) throw error
+    alert('Account created! Please sign in.')
+    setMode('login')
+  }
     } catch (error) {
       setError(error.message)
     }
