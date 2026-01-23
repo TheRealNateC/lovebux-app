@@ -219,10 +219,17 @@ function SetupView({ user, onComplete, onSignOut }) {
       })
     }
 
-    alert(`Relationship created! Share code: ${newCode}`)
+    // Close modal first
     setShowCreateMode(false)
     onClose()
-    window.location.reload()
+    
+    // Show alert with code
+    alert(`Relationship created! Share code: ${newCode}`)
+    
+    // Hard reload
+    setTimeout(() => {
+      window.location.replace(window.location.href)
+    }, 100)
   } catch (error) {
     console.error('Create couple error:', error)
     alert('Error creating relationship: ' + error.message)
@@ -230,22 +237,17 @@ function SetupView({ user, onComplete, onSignOut }) {
 }
 
  const joinCouple = async () => {
+  if (!joinName.trim()) {
+    alert('Please enter your name')
+    return
+  }
+
+  if (!code || code.length !== 6) {
+    alert('Please enter a valid 6-character code')
+    return
+  }
+
   try {
-    console.log('Starting join process...')
-    console.log('Join name:', joinName)
-    console.log('Code:', code)
-    console.log('User ID:', user.id)
-
-    if (!joinName.trim()) {
-      alert('Please enter your name')
-      return
-    }
-
-    if (!code || code.length !== 6) {
-      alert('Please enter a valid 6-character code')
-      return
-    }
-
     const upperCode = code.toUpperCase().trim()
 
     // Check if user is already in a relationship
@@ -253,8 +255,6 @@ function SetupView({ user, onComplete, onSignOut }) {
       .from('couples')
       .select('*')
       .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
-
-    console.log('Existing relationship check:', existingRelationship)
 
     if (existingRelationship && existingRelationship.length > 0) {
       alert('You are already in a relationship. Please unlink first.')
@@ -267,88 +267,58 @@ function SetupView({ user, onComplete, onSignOut }) {
       .select('*')
       .eq('pairing_code', upperCode)
 
-    console.log('Couples found:', couples)
-    console.log('Fetch error:', fetchError)
-
-    if (fetchError) {
-      alert('Database error: ' + fetchError.message)
-      return
-    }
-
-    if (!couples || couples.length === 0) {
-      alert('Invalid pairing code! Code: ' + upperCode)
+    if (fetchError || !couples || couples.length === 0) {
+      alert('Invalid pairing code!')
       return
     }
 
     const targetCouple = couples[0]
-    console.log('Target couple:', targetCouple)
 
-    // Verify partner2_id is null
     if (targetCouple.partner2_id !== null) {
       alert('This relationship already has both partners!')
       return
     }
 
-    // Can't join your own relationship
     if (targetCouple.partner1_id === user.id) {
       alert('You cannot join your own relationship!')
       return
     }
 
-    console.log('Updating couple with partner2_id:', user.id, 'and partner2_name:', joinName)
-
     // Update the couple
-    const { data: updateResult, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('couples')
       .update({
         partner2_id: user.id,
         partner2_name: joinName.trim()
       })
       .eq('id', targetCouple.id)
-      .select()
-
-    console.log('Update result:', updateResult)
-    console.log('Update error:', updateError)
 
     if (updateError) {
-      alert('Failed to join relationship: ' + updateError.message)
+      alert('Failed to join: ' + updateError.message)
       return
     }
-
-    if (!updateResult || updateResult.length === 0) {
-      alert('Update failed - no rows affected. Check RLS policies.')
-      return
-    }
-
-    console.log('Successfully updated couple. Creating balance...')
 
     // Create balance
-    const { data: balanceResult, error: balanceError } = await supabase
-      .from('balances')
-      .insert({
-        couple_id: targetCouple.id,
-        user_id: user.id,
-        balance: 100
-      })
-      .select()
+    await supabase.from('balances').insert({
+      couple_id: targetCouple.id,
+      user_id: user.id,
+      balance: 100
+    })
 
-    console.log('Balance result:', balanceResult)
-    console.log('Balance error:', balanceError)
+    // Close modal FIRST
+    setShowJoinMode(false)
+    onClose()
 
-    if (balanceError) {
-      console.error('Balance creation failed but continuing:', balanceError)
-    }
-
-    alert('Successfully joined relationship! Reloading...')
+    // Then show success and reload
+    alert('Successfully joined! Loading your dashboard...')
     
-    // Force reload
+    // Hard reload - multiple methods to ensure it works
     setTimeout(() => {
-      window.location.href = window.location.origin
-    }, 500)
+      window.location.replace(window.location.href)
+    }, 100)
 
   } catch (error) {
-    console.error('Join exception:', error)
-    alert('Unexpected error: ' + error.message)
+    alert('Error: ' + error.message)
   }
 }
 
