@@ -196,34 +196,68 @@ function SetupView({ user, onComplete, onSignOut }) {
     }
   }
 
-  const joinCouple = async () => {
-    const { data: couple } = await supabase
+ const joinCouple = async () => {
+  try {
+    // First check if user is already in a relationship
+    const { data: existingUserCouple } = await supabase
+      .from('couples')
+      .select('*')
+      .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
+      .single()
+
+    if (existingUserCouple) {
+      alert('You are already in a relationship. Please unlink first.')
+      return
+    }
+
+    // Find the couple with this pairing code
+    const { data: targetCouple, error: fetchError } = await supabase
       .from('couples')
       .select('*')
       .eq('pairing_code', code.toUpperCase())
       .single()
 
-    if (!couple || couple.partner2_id) {
-      alert('Invalid or already used code!')
+    if (fetchError || !targetCouple) {
+      alert('Invalid pairing code!')
       return
     }
 
-    await supabase
+    // Check if the couple already has both partners
+    if (targetCouple.partner2_id) {
+      alert('This relationship already has two partners!')
+      return
+    }
+
+    // Join the relationship
+    const { error: updateError } = await supabase
       .from('couples')
       .update({
         partner2_id: user.id,
         partner2_name: name
       })
-      .eq('id', couple.id)
+      .eq('id', targetCouple.id)
 
+    if (updateError) {
+      alert('Error joining: ' + updateError.message)
+      return
+    }
+
+    // Create balance for new partner
     await supabase.from('balances').insert({
-      couple_id: couple.id,
+      couple_id: targetCouple.id,
       user_id: user.id,
       balance: 100
     })
 
-    onComplete()
+    alert('Successfully joined relationship!')
+    setShowJoinMode(false)
+    onClose()
+    window.location.reload()
+  } catch (error) {
+    console.error('Join error:', error)
+    alert('Error joining relationship: ' + error.message)
   }
+}
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(pairingCode)
@@ -1060,7 +1094,7 @@ const unlinkRelationship = async () => {
             partner1_name: couple.partner2_name,
             partner2_id: null,
             partner2_name: null,
-            pairing_code: null  // Clear the pairing code
+            // Keep pairing code so it can be reused
           })
           .eq('id', couple.id)
         
