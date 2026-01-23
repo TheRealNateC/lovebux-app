@@ -554,3 +554,500 @@ function GiveModal({ onClose, onGive }) {
     </div>
   )
 }
+function RewardModal({ onClose, coupleId }) {
+  const [name, setName] = useState('')
+  const [cost, setCost] = useState(20)
+  const [description, setDescription] = useState('')
+  const [category, setCategory] = useState('Personal')
+
+  const handleCreate = async () => {
+    if (name.trim()) {
+      await supabase.from('rewards').insert({
+        couple_id: coupleId,
+        name,
+        cost,
+        description,
+        category
+      })
+      onClose()
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-purple-600">Create Reward</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Reward Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Back massage, cook favorite meal..."
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value="Romance">Romance</option>
+              <option value="Food">Food</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Chores">Chores</option>
+              <option value="Personal">Personal</option>
+              <option value="Luxury">Luxury</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Cost (Lovebux)</label>
+            <input
+              type="number"
+              value={cost}
+              onChange={(e) => setCost(Number(e.target.value))}
+              className="w-full p-2 border rounded-lg"
+              min="1"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Description</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description"
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+
+          <button
+            onClick={handleCreate}
+            className="w-full bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600 transition"
+          >
+            Create Reward
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+function BetModal({ onClose, onBet, couple }) {
+  const [amount, setAmount] = useState(10)
+  const [description, setDescription] = useState('')
+  const [winner, setWinner] = useState(couple.partner1_id)
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-blue-600">Settle a Bet</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Bet Description</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Who can do more pushups..."
+              className="w-full p-2 border rounded-lg"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Amount</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="w-full p-2 border rounded-lg"
+              min="1"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Winner</label>
+            <select
+              value={winner}
+              onChange={(e) => setWinner(e.target.value)}
+              className="w-full p-2 border rounded-lg"
+            >
+              <option value={couple.partner1_id}>{couple.partner1_name || 'Partner 1'}</option>
+              <option value={couple.partner2_id}>{couple.partner2_name || 'Partner 2'}</option>
+            </select>
+          </div>
+
+          <button
+            onClick={() => {
+              if (description.trim()) {
+                onBet(amount, description, winner)
+                onClose()
+              }
+            }}
+            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition"
+          >
+            Settle Bet
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+function SettingsModal({ user, couple, onClose }) {
+  const [showCreateMode, setShowCreateMode] = useState(false)
+  const [showJoinMode, setShowJoinMode] = useState(false)
+  const [createName, setCreateName] = useState('')
+  const [joinName, setJoinName] = useState('')
+  const [code, setCode] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
+
+  const createCouple = async () => {
+    if (!createName.trim()) {
+      alert('Please enter your name')
+      return
+    }
+
+    try {
+      // Clean up old unpaired relationships
+      const { data: oldCouples } = await supabase
+        .from('couples')
+        .select('*')
+        .eq('partner1_id', user.id)
+        .is('partner2_id', null)
+
+      if (oldCouples && oldCouples.length > 0) {
+        for (const oldCouple of oldCouples) {
+          await supabase.from('balances').delete().eq('couple_id', oldCouple.id)
+          await supabase.from('rewards').delete().eq('couple_id', oldCouple.id)
+          await supabase.from('transactions').delete().eq('couple_id', oldCouple.id)
+          await supabase.from('couples').delete().eq('id', oldCouple.id)
+        }
+      }
+
+      const newCode = generateCode()
+      const { data, error } = await supabase
+        .from('couples')
+        .insert({
+          partner1_id: user.id,
+          partner1_name: createName.trim(),
+          pairing_code: newCode
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      await supabase.from('balances').insert({
+        couple_id: data.id,
+        user_id: user.id,
+        balance: 100
+      })
+
+      const defaultRewards = [
+        { name: 'Cuddle Session', cost: 15, description: '30 min mandatory cuddle time', category: 'Romance' },
+        { name: 'Date Night Choice', cost: 50, description: 'Pick the next date activity', category: 'Romance' },
+        { name: 'That "Special Thing"', cost: 100, description: 'You know what it means 😉', category: 'Romance' },
+        { name: 'Dishes Pass', cost: 20, description: 'Skip doing dishes for a day', category: 'Chores' },
+        { name: 'Laundry Service', cost: 30, description: 'Partner does your laundry', category: 'Chores' },
+        { name: 'Cleaning Help', cost: 40, description: 'Partner cleans a room of your choice', category: 'Chores' },
+        { name: 'One Thing', cost: 25, description: 'Partner does one task/errand for you', category: 'Chores' },
+        { name: 'Choose Next Meal Out', cost: 30, description: 'Pick the restaurant next time', category: 'Food' },
+        { name: "Don't Have to Cook", cost: 35, description: 'Order takeout or partner cooks', category: 'Food' },
+        { name: 'Breakfast in Bed', cost: 40, description: 'Get breakfast made and served', category: 'Food' },
+        { name: 'Cook Specific Meal', cost: 45, description: 'Partner makes your favorite meal', category: 'Food' },
+        { name: 'Movie/TV Show Choice', cost: 20, description: 'Control what you watch tonight', category: 'Entertainment' },
+        { name: 'Game Night Pick', cost: 20, description: 'Choose the game you play together', category: 'Entertainment' },
+        { name: 'Hobby Participation', cost: 35, description: 'Partner joins your hobby for an hour', category: 'Entertainment' }
+      ]
+
+      for (const reward of defaultRewards) {
+        await supabase.from('rewards').insert({
+          couple_id: data.id,
+          ...reward
+        })
+      }
+
+      onClose()
+      alert(`Relationship created! Code: ${newCode}`)
+      location.reload(true)
+
+    } catch (error) {
+      alert('Error: ' + error.message)
+    }
+  }
+
+  const joinCouple = async () => {
+    if (!joinName.trim()) {
+      alert('Please enter your name')
+      return
+    }
+
+    if (!code || code.length !== 6) {
+      alert('Please enter a valid 6-character code')
+      return
+    }
+
+    try {
+      const upperCode = code.toUpperCase().trim()
+
+      const { data: existingRelationship } = await supabase
+        .from('couples')
+        .select('*')
+        .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
+
+      if (existingRelationship && existingRelationship.length > 0) {
+        alert('You are already in a relationship. Unlink first.')
+        return
+      }
+
+      const { data: couples, error: fetchError } = await supabase
+        .from('couples')
+        .select('*')
+        .eq('pairing_code', upperCode)
+
+      if (fetchError || !couples || couples.length === 0) {
+        alert('Invalid pairing code!')
+        return
+      }
+
+      const targetCouple = couples[0]
+
+      if (targetCouple.partner2_id !== null) {
+        alert('Relationship already has both partners!')
+        return
+      }
+
+      if (targetCouple.partner1_id === user.id) {
+        alert('Cannot join your own relationship!')
+        return
+      }
+
+      const { error: updateError } = await supabase
+        .from('couples')
+        .update({
+          partner2_id: user.id,
+          partner2_name: joinName.trim()
+        })
+        .eq('id', targetCouple.id)
+
+      if (updateError) throw updateError
+
+      await supabase.from('balances').insert({
+        couple_id: targetCouple.id,
+        user_id: user.id,
+        balance: 100
+      })
+
+      onClose()
+      alert('Successfully joined!')
+      location.reload(true)
+
+    } catch (error) {
+      alert('Error: ' + error.message)
+    }
+  }
+
+  const unlinkRelationship = async () => {
+    if (!confirm('Are you sure you want to unlink from this relationship? This cannot be undone.')) {
+      return
+    }
+
+    try {
+      const isPartner1 = user.id === couple.partner1_id
+
+      await supabase
+        .from('balances')
+        .delete()
+        .eq('couple_id', couple.id)
+        .eq('user_id', user.id)
+
+      if (isPartner1) {
+        if (couple.partner2_id) {
+          await supabase
+            .from('couples')
+            .update({
+              partner1_id: couple.partner2_id,
+              partner1_name: couple.partner2_name,
+              partner2_id: null,
+              partner2_name: null
+            })
+            .eq('id', couple.id)
+        } else {
+          await supabase.from('transactions').delete().eq('couple_id', couple.id)
+          await supabase.from('rewards').delete().eq('couple_id', couple.id)
+          await supabase.from('balances').delete().eq('couple_id', couple.id)
+          await supabase.from('couples').delete().eq('id', couple.id)
+        }
+      } else {
+        await supabase
+          .from('couples')
+          .update({
+            partner2_id: null,
+            partner2_name: null
+          })
+          .eq('id', couple.id)
+      }
+
+      onClose()
+      alert('Successfully unlinked')
+      location.reload(true)
+
+    } catch (error) {
+      alert('Error: ' + error.message)
+    }
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-purple-600">Settings</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X size={24} />
+          </button>
+        </div>
+
+        {couple && !showCreateMode && !showJoinMode && (
+          <div className="space-y-4">
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <h4 className="font-semibold mb-2">Current Relationship</h4>
+              <p className="text-sm text-gray-600">
+                {couple.partner1_name} & {couple.partner2_name || '(Waiting for partner)'}
+              </p>
+              {couple.pairing_code && (
+                <div className="mt-3">
+                  <p className="text-xs text-gray-500 mb-1">Pairing Code:</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-lg font-bold text-purple-600">{couple.pairing_code}</span>
+                    <button
+                      onClick={() => copyToClipboard(couple.pairing_code)}
+                      className="p-1 hover:bg-purple-100 rounded"
+                    >
+                      {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} className="text-purple-600" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={unlinkRelationship}
+              className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
+            >
+              Unlink from Relationship
+            </button>
+          </div>
+        )}
+
+        {!couple && !showCreateMode && !showJoinMode && (
+          <div className="space-y-4">
+            <p className="text-gray-600 text-center mb-4">You&apos;re not in a relationship yet</p>
+            <button
+              onClick={() => setShowCreateMode(true)}
+              className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600"
+            >
+              Create New Relationship
+            </button>
+            <button
+              onClick={() => setShowJoinMode(true)}
+              className="w-full bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600"
+            >
+              Join Existing Relationship
+            </button>
+          </div>
+        )}
+
+        {showCreateMode && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Name</label>
+              <input
+                type="text"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                placeholder="Enter your name"
+              />
+            </div>
+            <button
+              onClick={createCouple}
+              disabled={!createName.trim()}
+              className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 disabled:bg-gray-300"
+            >
+              Create Relationship
+            </button>
+            <button
+              onClick={() => setShowCreateMode(false)}
+              className="w-full text-gray-600 py-2"
+            >
+              Back
+            </button>
+          </div>
+        )}
+
+        {showJoinMode && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Name</label>
+              <input
+                type="text"
+                value={joinName}
+                onChange={(e) => setJoinName(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                placeholder="Enter your name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Pairing Code</label>
+              <input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                className="w-full p-3 border rounded-lg uppercase"
+                placeholder="XXXXXX"
+                maxLength={6}
+              />
+            </div>
+            <button
+              onClick={joinCouple}
+              disabled={!joinName.trim() || code.length !== 6}
+              className="w-full bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600 disabled:bg-gray-300"
+            >
+              Join Relationship
+            </button>
+            <button
+              onClick={() => setShowJoinMode(false)}
+              className="w-full text-gray-600 py-2"
+            >
+              Back
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
