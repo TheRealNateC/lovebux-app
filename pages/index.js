@@ -181,7 +181,7 @@ function SetupView({ user, onComplete, onSignOut }) {
       .from('couples')
       .insert({
         partner1_id: user.id,
-        partner1_name: name,
+        partner1_name: createName,
         pairing_code: newCode
       })
       .select()
@@ -310,7 +310,7 @@ function SetupView({ user, onComplete, onSignOut }) {
       .from('couples')
       .update({
         partner2_id: user.id,
-        partner2_name: name
+        partner2_name: joinName
       })
       .eq('id', couple.id)
       .select()
@@ -342,9 +342,7 @@ function SetupView({ user, onComplete, onSignOut }) {
 
     console.log('=== JOIN SUCCESS ===')
     alert('Successfully joined relationship!')
-    setShowJoinMode(false)
-    onClose()
-    window.location.reload()
+  window.location.href = window.location.href
   } catch (error) {
     console.error('=== JOIN EXCEPTION ===', error)
     alert('Unexpected error: ' + error.message)
@@ -1083,8 +1081,10 @@ function BetModal({ onClose, onBet, couple }) {
 function SettingsModal({ user, couple, onClose }) {
   const [showCreateMode, setShowCreateMode] = useState(false)
   const [showJoinMode, setShowJoinMode] = useState(false)
-  const [name, setName] = useState('')
+  const [createName, setCreateName] = useState('')
+  const [joinName, setJoinName] = useState('')
   const [code, setCode] = useState('')
+  const [pairingCode, setPairingCode] = useState('')
   const [copied, setCopied] = useState(false)
 
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
@@ -1305,15 +1305,15 @@ const unlinkRelationship = async () => {
               <label className="block text-sm font-medium mb-2">Your Name</label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
                 className="w-full p-3 border rounded-lg"
                 placeholder="Enter your name"
               />
             </div>
             <button
               onClick={createCouple}
-              disabled={!name.trim()}
+              disabled={!createName.trim()}
               className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 disabled:bg-gray-300"
             >
               Create Relationship
@@ -1333,8 +1333,8 @@ const unlinkRelationship = async () => {
               <label className="block text-sm font-medium mb-2">Your Name</label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={joinName}
+                onChange={(e) => setJoinName(e.target.value)}
                 className="w-full p-3 border rounded-lg"
                 placeholder="Enter your name"
               />
@@ -1352,7 +1352,7 @@ const unlinkRelationship = async () => {
             </div>
             <button
               onClick={joinCouple}
-              disabled={!name.trim() || code.length !== 6}
+              disabled={!joinName.trim() || code.length !== 6}
               className="w-full bg-purple-500 text-white py-3 rounded-lg font-semibold hover:bg-purple-600 disabled:bg-gray-300"
             >
               Join Relationship
