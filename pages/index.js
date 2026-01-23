@@ -1035,50 +1035,65 @@ function SettingsModal({ user, couple, onClose }) {
     onClose()
   }
 
-  const unlinkRelationship = async () => {
-    if (!confirm('Are you sure you want to unlink from this relationship? This cannot be undone.')) {
-      return
-    }
+const unlinkRelationship = async () => {
+  if (!confirm('Are you sure you want to unlink from this relationship? This cannot be undone.')) {
+    return
+  }
 
+  try {
     const isPartner1 = user.id === couple.partner1_id
 
-    if (isPartner1) {
-      // If partner1 is leaving and partner2 exists, make partner2 the new partner1
-      if (couple.partner2_id) {
-        await supabase
-          .from('couples')
-          .update({
-            partner1_id: couple.partner2_id,
-            partner1_name: couple.partner2_name,
-            partner2_id: null,
-            partner2_name: null
-          })
-          .eq('id', couple.id)
-      } else {
-        // If no partner2, delete the couple
-        await supabase.from('couples').delete().eq('id', couple.id)
-      }
-    } else {
-      // If partner2 is leaving, just remove them
-      await supabase
-        .from('couples')
-        .update({
-          partner2_id: null,
-          partner2_name: null
-        })
-        .eq('id', couple.id)
-    }
-
-    // Delete user's balance
+    // Delete user's balance first
     await supabase
       .from('balances')
       .delete()
       .eq('couple_id', couple.id)
       .eq('user_id', user.id)
 
-    alert('Unlinked from relationship')
+    if (isPartner1) {
+      // If partner1 is leaving and partner2 exists, make partner2 the new partner1
+      if (couple.partner2_id) {
+        const { error } = await supabase
+          .from('couples')
+          .update({
+            partner1_id: couple.partner2_id,
+            partner1_name: couple.partner2_name,
+            partner2_id: null,
+            partner2_name: null,
+            pairing_code: null  // Clear the pairing code
+          })
+          .eq('id', couple.id)
+        
+        if (error) throw error
+      } else {
+        // If no partner2, delete the entire couple and all related data
+        await supabase.from('transactions').delete().eq('couple_id', couple.id)
+        await supabase.from('rewards').delete().eq('couple_id', couple.id)
+        await supabase.from('balances').delete().eq('couple_id', couple.id)
+        await supabase.from('couples').delete().eq('id', couple.id)
+      }
+    } else {
+      // If partner2 is leaving, just remove them and clear pairing code
+      const { error } = await supabase
+        .from('couples')
+        .update({
+          partner2_id: null,
+          partner2_name: null,
+          pairing_code: null  // Clear the pairing code so it can be reused
+        })
+        .eq('id', couple.id)
+      
+      if (error) throw error
+    }
+
+    alert('Successfully unlinked from relationship')
     onClose()
+    window.location.reload() // Force a refresh to update the UI
+  } catch (error) {
+    console.error('Unlink error:', error)
+    alert('Error unlinking: ' + error.message)
   }
+}
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
