@@ -305,9 +305,18 @@ function SetupView({ user, onComplete, onSignOut }) {
       balance: 100
     })
     
-  } catch (error) {
-    alert('Error: ' + error.message)
-  }
+    // Success!
+    alert('Successfully joined relationship!')
+    onClose()
+    
+    // Force a hard reload after closing modal
+    setTimeout(() => {
+      window.location.href = window.location.href
+    }, 100)
+    
+    } catch (error) {
+      alert('Error: ' + error.message)
+    }
 }
 
   const copyToClipboard = () => {
@@ -1094,8 +1103,13 @@ function SettingsModal({ user, couple, onClose }) {
         })
       }
 
-      alert(`Relationship created! Share this code with your partner: ${newCode}`)
+      alert(`Relationship created! Share this code: ${newCode}`)
       onClose()
+      
+      // Force reload to show dashboard with pairing code visible
+      setTimeout(() => {
+        window.location.href = window.location.href
+      }, 100)
       
       } catch (error) {
         console.error('Create couple error:', error)
