@@ -157,6 +157,25 @@ function SetupView({ user, onComplete, onSignOut }) {
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
 
   const createCouple = async () => {
+  try {
+    // First, clean up any old unpaired relationships where this user is partner1
+    const { data: oldCouples } = await supabase
+      .from('couples')
+      .select('*')
+      .eq('partner1_id', user.id)
+      .is('partner2_id', null)
+
+    if (oldCouples && oldCouples.length > 0) {
+      for (const oldCouple of oldCouples) {
+        // Delete associated data
+        await supabase.from('balances').delete().eq('couple_id', oldCouple.id)
+        await supabase.from('rewards').delete().eq('couple_id', oldCouple.id)
+        await supabase.from('transactions').delete().eq('couple_id', oldCouple.id)
+        await supabase.from('couples').delete().eq('id', oldCouple.id)
+      }
+    }
+
+    // Now create the new relationship
     const newCode = generateCode()
     const { data, error } = await supabase
       .from('couples')
@@ -168,33 +187,47 @@ function SetupView({ user, onComplete, onSignOut }) {
       .select()
       .single()
 
-    if (!error) {
-      await supabase.from('balances').insert({
+    if (error) throw error
+
+    await supabase.from('balances').insert({
+      couple_id: data.id,
+      user_id: user.id,
+      balance: 100
+    })
+
+    const defaultRewards = [
+      { name: 'Cuddle Session', cost: 15, description: '30 min mandatory cuddle time', category: 'Romance' },
+      { name: 'Date Night Choice', cost: 50, description: 'Pick the next date activity', category: 'Romance' },
+      { name: 'That "Special Thing"', cost: 100, description: 'You know what it means 😉', category: 'Romance' },
+      { name: 'Dishes Pass', cost: 20, description: 'Skip doing dishes for a day', category: 'Chores' },
+      { name: 'Laundry Service', cost: 30, description: 'Partner does your laundry', category: 'Chores' },
+      { name: 'Cleaning Help', cost: 40, description: 'Partner cleans a room of your choice', category: 'Chores' },
+      { name: 'One Thing', cost: 25, description: 'Partner does one task/errand for you', category: 'Chores' },
+      { name: 'Choose Next Meal Out', cost: 30, description: 'Pick the restaurant next time', category: 'Food' },
+      { name: "Don't Have to Cook", cost: 35, description: 'Order takeout or partner cooks', category: 'Food' },
+      { name: 'Breakfast in Bed', cost: 40, description: 'Get breakfast made and served', category: 'Food' },
+      { name: 'Cook Specific Meal', cost: 45, description: 'Partner makes your favorite meal', category: 'Food' },
+      { name: 'Movie/TV Show Choice', cost: 20, description: 'Control what you watch tonight', category: 'Entertainment' },
+      { name: 'Game Night Pick', cost: 20, description: 'Choose the game you play together', category: 'Entertainment' },
+      { name: 'Hobby Participation', cost: 35, description: 'Partner joins your hobby for an hour', category: 'Entertainment' }
+    ]
+
+    for (const reward of defaultRewards) {
+      await supabase.from('rewards').insert({
         couple_id: data.id,
-        user_id: user.id,
-        balance: 100
+        ...reward
       })
-
-      const defaultRewards = [
-        { name: 'Date Night Choice', cost: 50, description: 'Pick the next date activity', category: 'Romance' },
-        { name: 'Cuddle Session', cost: 15, description: '30 min mandatory cuddle time', category: 'Romance' },
-        { name: 'Love Letter', cost: 40, description: 'Receive a handwritten love letter', category: 'Romance' },
-        { name: 'Breakfast in Bed', cost: 35, description: 'Get breakfast made and served', category: 'Food' },
-        { name: 'Movie Choice', cost: 20, description: 'Choose tonight\'s movie', category: 'Entertainment' },
-        { name: 'Dishes Pass', cost: 25, description: 'Skip doing dishes for a day', category: 'Chores' },
-      ]
-
-      for (const reward of defaultRewards) {
-        await supabase.from('rewards').insert({
-          couple_id: data.id,
-          ...reward
-        })
-      }
-
-      setPairingCode(newCode)
-      setCoupleData(data)
     }
+
+    alert(`Relationship created! Share code: ${newCode}`)
+    setShowCreateMode(false)
+    onClose()
+    window.location.reload()
+  } catch (error) {
+    console.error('Create couple error:', error)
+    alert('Error creating relationship: ' + error.message)
   }
+}
 
  const joinCouple = async () => {
   try {
@@ -1093,36 +1126,48 @@ const unlinkRelationship = async () => {
             partner1_id: couple.partner2_id,
             partner1_name: couple.partner2_name,
             partner2_id: null,
-            partner2_name: null,
-            // Keep pairing code so it can be reused
+            partner2_name: null
           })
           .eq('id', couple.id)
         
         if (error) throw error
       } else {
-        // If no partner2, delete the entire couple and all related data
+        // If no partner2, delete the entire couple and all related data immediately
         await supabase.from('transactions').delete().eq('couple_id', couple.id)
         await supabase.from('rewards').delete().eq('couple_id', couple.id)
         await supabase.from('balances').delete().eq('couple_id', couple.id)
         await supabase.from('couples').delete().eq('id', couple.id)
       }
     } else {
-      // If partner2 is leaving, just remove them and clear pairing code
+      // If partner2 is leaving, just remove them
       const { error } = await supabase
         .from('couples')
         .update({
           partner2_id: null,
-          partner2_name: null,
-          pairing_code: null  // Clear the pairing code so it can be reused
+          partner2_name: null
         })
         .eq('id', couple.id)
       
       if (error) throw error
+
+      // Schedule deletion of unpaired relationship after 48 hours
+      // For now, we'll just mark it but you could use a serverless function for delayed deletion
+      // Since we don't have that, let's delete it immediately if it's been sitting unpaired
+      const coupleAge = new Date() - new Date(couple.created_at)
+      const hoursSinceCreation = coupleAge / (1000 * 60 * 60)
+      
+      // If the couple has been around for more than 1 hour and is now unpaired, delete it
+      if (hoursSinceCreation > 1) {
+        await supabase.from('transactions').delete().eq('couple_id', couple.id)
+        await supabase.from('rewards').delete().eq('couple_id', couple.id)
+        await supabase.from('balances').delete().eq('couple_id', couple.id)
+        await supabase.from('couples').delete().eq('id', couple.id)
+      }
     }
 
     alert('Successfully unlinked from relationship')
     onClose()
-    window.location.reload() // Force a refresh to update the UI
+    window.location.reload()
   } catch (error) {
     console.error('Unlink error:', error)
     alert('Error unlinking: ' + error.message)
