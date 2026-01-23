@@ -231,120 +231,123 @@ function SetupView({ user, onComplete, onSignOut }) {
 
  const joinCouple = async () => {
   try {
+    console.log('Starting join process...')
+    console.log('Join name:', joinName)
+    console.log('Code:', code)
+    console.log('User ID:', user.id)
+
+    if (!joinName.trim()) {
+      alert('Please enter your name')
+      return
+    }
+
+    if (!code || code.length !== 6) {
+      alert('Please enter a valid 6-character code')
+      return
+    }
+
     const upperCode = code.toUpperCase().trim()
-    console.log('=== JOIN DEBUG START ===')
-    console.log('Input code:', code)
-    console.log('Uppercase trimmed code:', upperCode)
-    console.log('User ID trying to join:', user.id)
-    console.log('User name:', name)
 
     // Check if user is already in a relationship
-    const { data: existingUserCouple, error: existingError } = await supabase
+    const { data: existingRelationship } = await supabase
       .from('couples')
       .select('*')
       .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
-      
-    console.log('Existing relationship check:', {
-      data: existingUserCouple,
-      error: existingError
-    })
 
-    if (existingUserCouple && existingUserCouple.length > 0) {
-      console.log('User already in relationship!')
+    console.log('Existing relationship check:', existingRelationship)
+
+    if (existingRelationship && existingRelationship.length > 0) {
       alert('You are already in a relationship. Please unlink first.')
       return
     }
 
-    // Get ALL couples to see what's in the database
-    const { data: allCouples, error: allError } = await supabase
-      .from('couples')
-      .select('*')
-
-    console.log('ALL couples in database:', allCouples)
-    console.log('All couples error:', allError)
-
-    // Try to find the specific couple
-    const { data: targetCouple, error: fetchError } = await supabase
+    // Find the couple with this code
+    const { data: couples, error: fetchError } = await supabase
       .from('couples')
       .select('*')
       .eq('pairing_code', upperCode)
 
-    console.log('Target couple lookup with code:', upperCode)
-    console.log('Target couple result:', targetCouple)
-    console.log('Target couple error:', fetchError)
+    console.log('Couples found:', couples)
+    console.log('Fetch error:', fetchError)
 
     if (fetchError) {
-      console.error('Database fetch error:', fetchError)
       alert('Database error: ' + fetchError.message)
       return
     }
 
-    if (!targetCouple || targetCouple.length === 0) {
-      console.error('No couple found with this code!')
-      console.log('Codes in database:', allCouples?.map(c => c.pairing_code))
-      alert('Invalid pairing code! No relationship found with code: ' + upperCode)
+    if (!couples || couples.length === 0) {
+      alert('Invalid pairing code! Code: ' + upperCode)
       return
     }
 
-    const couple = Array.isArray(targetCouple) ? targetCouple[0] : targetCouple
-    console.log('Found couple object:', couple)
+    const targetCouple = couples[0]
+    console.log('Target couple:', targetCouple)
 
-    if (couple.partner2_id) {
-      console.log('Couple already has partner2:', couple.partner2_id)
-      alert('This relationship already has two partners!')
+    // Verify partner2_id is null
+    if (targetCouple.partner2_id !== null) {
+      alert('This relationship already has both partners!')
       return
     }
 
-    if (couple.partner1_id === user.id) {
+    // Can't join your own relationship
+    if (targetCouple.partner1_id === user.id) {
       alert('You cannot join your own relationship!')
       return
     }
 
-    console.log('Attempting to update couple with:', {
-      partner2_id: user.id,
-      partner2_name: name,
-      couple_id: couple.id
-    })
+    console.log('Updating couple with partner2_id:', user.id, 'and partner2_name:', joinName)
 
-    const { data: updateData, error: updateError } = await supabase
+    // Update the couple
+    const { data: updateResult, error: updateError } = await supabase
       .from('couples')
       .update({
         partner2_id: user.id,
-        partner2_name: joinName
+        partner2_name: joinName.trim()
       })
-      .eq('id', couple.id)
+      .eq('id', targetCouple.id)
       .select()
 
-    console.log('Update result:', { data: updateData, error: updateError })
+    console.log('Update result:', updateResult)
+    console.log('Update error:', updateError)
 
     if (updateError) {
-      console.error('Update error:', updateError)
-      alert('Error joining: ' + updateError.message)
+      alert('Failed to join relationship: ' + updateError.message)
       return
     }
 
-    console.log('Creating balance for user:', user.id, 'couple:', couple.id)
-    
-    const { data: balanceData, error: balanceError } = await supabase
+    if (!updateResult || updateResult.length === 0) {
+      alert('Update failed - no rows affected. Check RLS policies.')
+      return
+    }
+
+    console.log('Successfully updated couple. Creating balance...')
+
+    // Create balance
+    const { data: balanceResult, error: balanceError } = await supabase
       .from('balances')
       .insert({
-        couple_id: couple.id,
+        couple_id: targetCouple.id,
         user_id: user.id,
         balance: 100
       })
       .select()
 
-    console.log('Balance creation result:', { data: balanceData, error: balanceError })
+    console.log('Balance result:', balanceResult)
+    console.log('Balance error:', balanceError)
 
     if (balanceError) {
-      console.error('Balance error:', balanceError)
+      console.error('Balance creation failed but continuing:', balanceError)
     }
 
-    console.log('=== JOIN SUCCESS ===')
-    alert('Successfully joined relationship!')
-  window.location.href = window.location.href
+    alert('Successfully joined relationship! Reloading...')
+    
+    // Force reload
+    setTimeout(() => {
+      window.location.href = window.location.origin
+    }, 500)
+
   } catch (error) {
-    console.error('=== JOIN EXCEPTION ===', error)
+    console.error('Join exception:', error)
     alert('Unexpected error: ' + error.message)
   }
 }
