@@ -340,12 +340,9 @@ function AuthView() {
 
         <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-pink-200">
-            <input
-              type="text"
-              value={myName || 'Your Name'}
-              onChange={(e) => updatePartnerName(isPartner1, e.target.value)}
-              className="text-2xl font-bold text-gray-800 mb-2 border-b-2 border-transparent hover:border-pink-300 focus:border-pink-500 outline-none bg-transparent w-full"
-            />
+            <div className="text-2xl font-bold text-gray-800 mb-2">
+              {myName || 'Your Name'}
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-4xl font-bold text-pink-500">{myBalance}</span>
               <Heart className="text-pink-400" size={32} />
@@ -717,6 +714,8 @@ function SettingsModal({ user, couple, onClose }) {
   const [joinName, setJoinName] = useState('')
   const [code, setCode] = useState('')
   const [copied, setCopied] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [showEditName, setShowEditName] = useState(false)
 
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
 
@@ -788,7 +787,7 @@ function SettingsModal({ user, couple, onClose }) {
 
       onClose()
       alert(`Relationship created! Code: ${newCode}`)
-      location.reload(true)
+      window.location.href = window.location.href
 
     } catch (error) {
       alert('Error: ' + error.message)
@@ -859,7 +858,7 @@ function SettingsModal({ user, couple, onClose }) {
 
       onClose()
       alert('Successfully joined!')
-      location.reload(true)
+      window.location.href = window.location.href
 
     } catch (error) {
       alert('Error: ' + error.message)
@@ -909,7 +908,7 @@ function SettingsModal({ user, couple, onClose }) {
 
       onClose()
       alert('Successfully unlinked')
-      location.reload(true)
+      window.location.href = window.location.href
 
     } catch (error) {
       alert('Error: ' + error.message)
@@ -921,6 +920,28 @@ function SettingsModal({ user, couple, onClose }) {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
+  
+  const updateMyName = async (newName) => {
+    if (!newName.trim()) {
+      alert('Please enter a name')
+      return
+    }
+  
+    try {
+      const isPartner1 = user.id === couple.partner1_id
+      const field = isPartner1 ? 'partner1_name' : 'partner2_name'
+      
+      await supabase
+        .from('couples')
+        .update({ [field]: newName.trim() })
+        .eq('id', couple.id)
+  
+      alert('Name updated!')
+      window.location.href = window.location.href
+    } catch (error) {
+      alert('Error updating name: ' + error.message)
+    }
+  }
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -931,7 +952,7 @@ function SettingsModal({ user, couple, onClose }) {
           </button>
         </div>
 
-        {couple && !showCreateMode && !showJoinMode && (
+        {couple && !showCreateMode && !showJoinMode && !showEditName && (
           <div className="space-y-4">
             <div className="bg-purple-50 p-4 rounded-lg">
               <h4 className="font-semibold mb-2">Current Relationship</h4>
@@ -953,12 +974,51 @@ function SettingsModal({ user, couple, onClose }) {
                 </div>
               )}
             </div>
-
+        
+            <button
+              onClick={() => {
+                const myName = user.id === couple.partner1_id ? couple.partner1_name : couple.partner2_name
+                setEditName(myName || '')
+                setShowEditName(true)
+              }}
+              className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600"
+            >
+              Change My Name
+            </button>
+        
             <button
               onClick={unlinkRelationship}
               className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
             >
               Unlink from Relationship
+            </button>
+          </div>
+        )}
+        
+        {showEditName && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Name</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full p-3 border rounded-lg"
+                placeholder="Enter your name"
+              />
+            </div>
+            <button
+              onClick={() => updateMyName(editName)}
+              disabled={!editName.trim()}
+              className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 disabled:bg-gray-300"
+            >
+              Update Name
+            </button>
+            <button
+              onClick={() => setShowEditName(false)}
+              className="w-full text-gray-600 py-2"
+            >
+              Back
             </button>
           </div>
         )}
