@@ -157,8 +157,13 @@ function SetupView({ user, onComplete, onSignOut }) {
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
 
   const createCouple = async () => {
+  if (!createName.trim()) {
+    alert('Please enter your name')
+    return
+  }
+
   try {
-    // First, clean up any old unpaired relationships where this user is partner1
+    // Clean up old unpaired relationships
     const { data: oldCouples } = await supabase
       .from('couples')
       .select('*')
@@ -167,7 +172,6 @@ function SetupView({ user, onComplete, onSignOut }) {
 
     if (oldCouples && oldCouples.length > 0) {
       for (const oldCouple of oldCouples) {
-        // Delete associated data
         await supabase.from('balances').delete().eq('couple_id', oldCouple.id)
         await supabase.from('rewards').delete().eq('couple_id', oldCouple.id)
         await supabase.from('transactions').delete().eq('couple_id', oldCouple.id)
@@ -175,13 +179,13 @@ function SetupView({ user, onComplete, onSignOut }) {
       }
     }
 
-    // Now create the new relationship
+    // Create new relationship
     const newCode = generateCode()
     const { data, error } = await supabase
       .from('couples')
       .insert({
         partner1_id: user.id,
-        partner1_name: createName,
+        partner1_name: createName.trim(),
         pairing_code: newCode
       })
       .select()
@@ -219,20 +223,13 @@ function SetupView({ user, onComplete, onSignOut }) {
       })
     }
 
-    // Close modal first
-    setShowCreateMode(false)
     onClose()
-    
-    // Show alert with code
-    alert(`Relationship created! Share code: ${newCode}`)
-    
-    // Hard reload
-    setTimeout(() => {
-      window.location.replace(window.location.href)
-    }, 100)
+    alert(`Relationship created! Code: ${newCode}`)
+    location.reload(true)
+
   } catch (error) {
-    console.error('Create couple error:', error)
-    alert('Error creating relationship: ' + error.message)
+    console.error('Create error:', error)
+    alert('Error: ' + error.message)
   }
 }
 
@@ -243,25 +240,25 @@ function SetupView({ user, onComplete, onSignOut }) {
   }
 
   if (!code || code.length !== 6) {
-    alert('Please enter a valid 6-character code')
+    alert('Please enter a valid code')
     return
   }
 
   try {
     const upperCode = code.toUpperCase().trim()
 
-    // Check if user is already in a relationship
+    // Check if already in relationship
     const { data: existingRelationship } = await supabase
       .from('couples')
       .select('*')
       .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
 
     if (existingRelationship && existingRelationship.length > 0) {
-      alert('You are already in a relationship. Please unlink first.')
+      alert('You are already in a relationship. Unlink first.')
       return
     }
 
-    // Find the couple with this code
+    // Find couple
     const { data: couples, error: fetchError } = await supabase
       .from('couples')
       .select('*')
@@ -275,16 +272,16 @@ function SetupView({ user, onComplete, onSignOut }) {
     const targetCouple = couples[0]
 
     if (targetCouple.partner2_id !== null) {
-      alert('This relationship already has both partners!')
+      alert('Relationship already has both partners!')
       return
     }
 
     if (targetCouple.partner1_id === user.id) {
-      alert('You cannot join your own relationship!')
+      alert('Cannot join your own relationship!')
       return
     }
 
-    // Update the couple
+    // Join relationship
     const { error: updateError } = await supabase
       .from('couples')
       .update({
@@ -293,10 +290,7 @@ function SetupView({ user, onComplete, onSignOut }) {
       })
       .eq('id', targetCouple.id)
 
-    if (updateError) {
-      alert('Failed to join: ' + updateError.message)
-      return
-    }
+    if (updateError) throw updateError
 
     // Create balance
     await supabase.from('balances').insert({
@@ -304,19 +298,15 @@ function SetupView({ user, onComplete, onSignOut }) {
       user_id: user.id,
       balance: 100
     })
-    
-    // Success!
-    alert('Successfully joined relationship!')
+
     onClose()
-    
-    // Force a hard reload after closing modal
-    setTimeout(() => {
-      window.location.href = window.location.href
-    }, 100)
-    
-    } catch (error) {
-      alert('Error: ' + error.message)
-    }
+    alert('Successfully joined!')
+    location.reload(true)
+
+  } catch (error) {
+    console.error('Join error:', error)
+    alert('Error: ' + error.message)
+  }
 }
 
   const copyToClipboard = () => {
