@@ -304,19 +304,7 @@ function SetupView({ user, onComplete, onSignOut }) {
       user_id: user.id,
       balance: 100
     })
-
-    // Close modal FIRST
-    setShowJoinMode(false)
-    onClose()
-
-    // Then show success and reload
-    alert('Successfully joined! Loading your dashboard...')
     
-    // Hard reload - multiple methods to ensure it works
-    setTimeout(() => {
-      window.location.replace(window.location.href)
-    }, 100)
-
   } catch (error) {
     alert('Error: ' + error.message)
   }
@@ -468,6 +456,12 @@ function MainApp({ user, onSignOut }) {
 
   useEffect(() => {
     loadData()
+    
+    // Poll for updates every 2 seconds to catch changes quickly
+    const pollInterval = setInterval(() => {
+      loadData()
+    }, 2000)
+    
     const channel = supabase
       .channel('lovebux-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'balances' }, loadData)
@@ -475,8 +469,11 @@ function MainApp({ user, onSignOut }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'rewards' }, loadData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'couples' }, loadData)
       .subscribe()
-
-    return () => supabase.removeChannel(channel)
+  
+    return () => {
+      clearInterval(pollInterval)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const loadData = async () => {
@@ -1097,9 +1094,13 @@ function SettingsModal({ user, couple, onClose }) {
         })
       }
 
-      alert(`Relationship created! Share code: ${newCode}`)
-      setShowCreateMode(false)
+      alert(`Relationship created! Share this code with your partner: ${newCode}`)
       onClose()
+      
+      } catch (error) {
+        console.error('Create couple error:', error)
+        alert('Error creating relationship: ' + error.message)
+      }
     }
   }
 
@@ -1123,16 +1124,20 @@ function SettingsModal({ user, couple, onClose }) {
       })
       .eq('id', existingCouple.id)
 
+    // Create balance
     await supabase.from('balances').insert({
-      couple_id: existingCouple.id,
+      couple_id: targetCouple.id,
       user_id: user.id,
       balance: 100
     })
-
+    
+    // Success! Just close and let polling handle the rest
     alert('Successfully joined relationship!')
-    setShowJoinMode(false)
     onClose()
-  }
+    
+    } catch (error) {
+      alert('Error: ' + error.message)
+    }
 
 const unlinkRelationship = async () => {
   if (!confirm('Are you sure you want to unlink from this relationship? This cannot be undone.')) {
