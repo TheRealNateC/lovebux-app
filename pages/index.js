@@ -111,7 +111,7 @@ function AuthView() {
     </div>
   )
 }
-  function MainApp({ user, onSignOut }) {
+function MainApp({ user, onSignOut }) {
   const [couple, setCouple] = useState(null)
   const [balances, setBalances] = useState({})
   const [transactions, setTransactions] = useState([])
@@ -308,7 +308,7 @@ function AuthView() {
   const partnerName = user.id === couple.partner1_id ? couple.partner2_name : couple.partner1_name
   const isPartner1 = user.id === couple.partner1_id
 
-  const categories = ['All', 'Romance', 'Food', 'Entertainment', 'Chores', 'Personal', 'Luxury']
+  const categories = ['All', 'Quality Time', 'Food', 'Entertainment', 'Misc', 'Fun']
   const filteredRewards = selectedCategory === 'All' 
     ? rewards 
     : rewards.filter(r => r.category === selectedCategory)
@@ -599,12 +599,11 @@ function RewardModal({ onClose, coupleId }) {
               onChange={(e) => setCategory(e.target.value)}
               className="w-full p-2 border rounded-lg"
             >
-              <option value="Romance">Romance</option>
+              <option value="Quality Time">Quality Time</option>
               <option value="Food">Food</option>
               <option value="Entertainment">Entertainment</option>
-              <option value="Chores">Chores</option>
-              <option value="Personal">Personal</option>
-              <option value="Luxury">Luxury</option>
+              <option value="Misc">Misc</option>
+              <option value="Fun">Fun</option>
             </select>
           </div>
 
@@ -762,20 +761,30 @@ function SettingsModal({ user, couple, onClose }) {
       })
 
       const defaultRewards = [
-        { name: 'Cuddle Session', cost: 15, description: '30 min mandatory cuddle time', category: 'Romance' },
-        { name: 'Date Night Choice', cost: 50, description: 'Pick the next date activity', category: 'Romance' },
-        { name: 'That "Special Thing"', cost: 100, description: 'You know what it means 😉', category: 'Romance' },
-        { name: 'Dishes Pass', cost: 20, description: 'Skip doing dishes for a day', category: 'Chores' },
-        { name: 'Laundry Service', cost: 30, description: 'Partner does your laundry', category: 'Chores' },
-        { name: 'Cleaning Help', cost: 40, description: 'Partner cleans a room of your choice', category: 'Chores' },
-        { name: 'One Thing', cost: 25, description: 'Partner does one task/errand for you', category: 'Chores' },
-        { name: 'Choose Next Meal Out', cost: 30, description: 'Pick the restaurant next time', category: 'Food' },
-        { name: "Don't Have to Cook", cost: 35, description: 'Order takeout or partner cooks', category: 'Food' },
-        { name: 'Breakfast in Bed', cost: 40, description: 'Get breakfast made and served', category: 'Food' },
-        { name: 'Cook Specific Meal', cost: 45, description: 'Partner makes your favorite meal', category: 'Food' },
-        { name: 'Movie/TV Show Choice', cost: 20, description: 'Control what you watch tonight', category: 'Entertainment' },
-        { name: 'Game Night Pick', cost: 20, description: 'Choose the game you play together', category: 'Entertainment' },
-        { name: 'Hobby Participation', cost: 35, description: 'Partner joins your hobby for an hour', category: 'Entertainment' }
+        // Quality Time
+        { name: 'Date Night Choice', cost: 30, description: 'Pick the next date activity', category: 'Quality Time' },
+        { name: 'Netflix & Chill', cost: 20, description: 'Take some time to relax with me', category: 'Quality Time' },
+        { name: 'Phone-Free Hour', cost: 20, description: 'No phones for the next hour', category: 'Quality Time' },
+        
+        // Food & Treats
+        { name: 'Choose Next Meal Out', cost: 20, description: 'Pick the restaurant', category: 'Food' },
+        { name: 'Breakfast in Bed', cost: 30, description: 'Get breakfast made and served', category: 'Food' },
+        { name: 'Cook Favorite Meal', cost: 40, description: 'Partner makes your favorite dish', category: 'Food' },
+        
+        // Entertainment
+        { name: 'Movie/TV Show Control', cost: 20, description: 'Control what you watch tonight', category: 'Entertainment' },
+        { name: 'Game Night Choice', cost: 20, description: 'Choose the game you play', category: 'Entertainment' },
+        { name: 'Hobby Participation', cost: 40, description: 'Partner joins your hobby for an hour', category: 'Entertainment' },
+        
+        // Miscellaneous
+        { name: 'Choose the Music', cost: 15, description: 'Control the playlist today', category: 'Misc' },
+        { name: 'Backrub/Massage', cost: 30, description: '15-minute massage', category: 'Misc' },
+        { name: 'Errand Run', cost: 25, description: 'Partner handles an errand for you', category: 'Misc' },
+        
+        // Fun
+        { name: 'Outfit Selection', cost: 20, description: 'I get to pick your outfit today', category: 'Fun' },
+        { name: 'Silly Dare', cost: 25, description: 'Partner does a silly challenge of your choice', category: 'Fun' },
+        { name: 'Photo Shoot', cost: 30, description: 'Partner models for your photos/videos', category: 'Fun' }
       ]
 
       for (const reward of defaultRewards) {
