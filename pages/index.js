@@ -507,6 +507,22 @@ function MainApp({ user, onSignOut }) {
                               )}
                             </p>
                           </div>
+                        ) : tx.type === 'gift' ? (
+                          <p className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">{getNameById(tx.to_user_id)}:</span>
+                            <span className="font-bold text-green-600">+{tx.amount}</span>
+                            {tx.balance_after != null && (
+                              <span className="text-xs text-gray-400">→ {tx.balance_after}</span>
+                            )}
+                          </p>
+                        ) : tx.type === 'redemption' ? (
+                          <p className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">{getNameById(tx.from_user_id)}:</span>
+                            <span className="font-bold text-red-600">{tx.amount}</span>
+                            {tx.balance_after != null && (
+                              <span className="text-xs text-gray-400">→ {tx.balance_after}</span>
+                            )}
+                          </p>
                         ) : (
                           <p className="flex items-center gap-2">
                             <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
