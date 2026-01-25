@@ -230,7 +230,6 @@ function MainApp({ user, onSignOut }) {
       }
     }
   }
-
   const giveLovebux = async (amount, reason) => {
     const partnerId = user.id === couple.partner1_id ? couple.partner2_id : couple.partner1_id
     const newBalance = (balances[partnerId] || 0) + amount
