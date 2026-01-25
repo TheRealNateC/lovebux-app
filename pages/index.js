@@ -123,6 +123,8 @@ function MainApp({ user, onSignOut }) {
   const [showRewardModal, setShowRewardModal] = useState(false)
   const [showBetModal, setShowBetModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
+  const [welcomeStep, setWelcomeStep] = useState(1)
 
   useEffect(() => {
     loadData()
@@ -141,6 +143,13 @@ function MainApp({ user, onSignOut }) {
       supabase.removeChannel(channel)
     }
   }, [user.id])
+
+  useEffect(() => {
+    // Show welcome modal if couple just formed and user hasn't given/received yet
+    if (couple && transactions.length === 0 && rewards.length > 0) {
+      setShowWelcomeModal(true)
+    }
+  }, [couple, transactions, rewards])
 
   const loadData = async () => {
     const { data: coupleData } = await supabase
@@ -177,6 +186,127 @@ function MainApp({ user, onSignOut }) {
       setRewards(rwd || [])
     } else {
       setCouple(null)
+    }
+
+    function WelcomeModal({ couple, user, onClose, onSendWelcome }) {
+      const [step, setStep] = useState(1)
+      const isPartner1 = user.id === couple.partner1_id
+      const myName = isPartner1 ? couple.partner1_name : couple.partner2_name
+      const partnerName = isPartner1 ? couple.partner2_name : couple.partner1_name
+    
+      if (step === 1) {
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+              <div className="text-center">
+                <div className="text-6xl mb-4">🎉</div>
+                <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-pink-500 to-purple-600 bg-clip-text text-transparent">
+                  Welcome to Lovebux!
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  You and {partnerName} are now connected! Let's get started with your first transaction.
+                </p>
+                <button
+                  onClick={() => setStep(2)}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    
+      if (step === 2) {
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+              <div className="text-center mb-6">
+                <div className="text-5xl mb-3">💝</div>
+                <h3 className="text-2xl font-bold mb-2 text-pink-600">Send Your First Lovebux!</h3>
+                <p className="text-gray-600 mb-4">
+                  Thank {partnerName} for joining you by sending them 10 Lovebux
+                </p>
+              </div>
+    
+              <div className="bg-pink-50 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">To:</span>
+                  <span className="font-bold text-pink-600">{partnerName}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-700 font-medium">Amount:</span>
+                  <span className="font-bold text-pink-600">10 Lovebux</span>
+                </div>
+                <div className="border-t border-pink-200 pt-2 mt-2">
+                  <p className="text-sm text-gray-600 italic">
+                    "Thanks for trying Lovebux with me! ❤️"
+                  </p>
+                </div>
+              </div>
+    
+              <button
+                onClick={() => {
+                  onSendWelcome()
+                  setStep(3)
+                }}
+                className="w-full bg-pink-500 text-white py-3 rounded-lg font-semibold hover:bg-pink-600 mb-3"
+              >
+                Send 10 Lovebux ❤️
+              </button>
+    
+              <button
+                onClick={() => setStep(3)}
+                className="w-full text-gray-600 py-2"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        )
+      }
+    
+      if (step === 3) {
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+              <div className="text-center">
+                <div className="text-5xl mb-3">🎁</div>
+                <h3 className="text-2xl font-bold mb-2 text-purple-600">Redeem Rewards</h3>
+                <p className="text-gray-600 mb-6">
+                  Earn Lovebux by doing nice things for each other, then redeem them for rewards below!
+                </p>
+    
+                <div className="bg-purple-50 rounded-lg p-4 mb-6 text-left">
+                  <h4 className="font-semibold text-purple-600 mb-3">How it works:</h4>
+                  <ol className="space-y-2 text-sm text-gray-700">
+                    <li className="flex items-start">
+                      <span className="font-bold text-purple-600 mr-2">1.</span>
+                      <span>Do something nice → Partner gives you Lovebux</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="font-bold text-purple-600 mr-2">2.</span>
+                      <span>Save up Lovebux in your balance</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="font-bold text-purple-600 mr-2">3.</span>
+                      <span>Redeem for rewards when you have enough!</span>
+                    </li>
+                  </ol>
+                </div>
+    
+                <button
+                  onClick={onClose}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700"
+                >
+                  Start Using Lovebux! 🚀
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
     }
   }
 
@@ -260,7 +390,28 @@ function MainApp({ user, onSignOut }) {
       .update({ [field]: newName })
       .eq('id', couple.id)
   }
-    if (!couple) {
+
+  const sendWelcomeGift = async () => {
+    const partnerId = user.id === couple.partner1_id ? couple.partner2_id : couple.partner1_id
+    const partnerBalance = balances[partnerId] || 0
+  
+    await supabase
+      .from('balances')
+      .update({ balance: partnerBalance + 10 })
+      .eq('couple_id', couple.id)
+      .eq('user_id', partnerId)
+  
+    await supabase.from('transactions').insert({
+      couple_id: couple.id,
+      from_user_id: user.id,
+      to_user_id: partnerId,
+      amount: 10,
+      reason: 'Thanks for trying Lovebux with me! ❤️',
+      type: 'gift'
+    })
+  }  
+  
+  if (!couple) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50 p-4">
         <div className="max-w-4xl mx-auto">
@@ -495,6 +646,12 @@ function MainApp({ user, onSignOut }) {
       {showRewardModal && <RewardModal onClose={() => setShowRewardModal(false)} coupleId={couple.id} />}
       {showBetModal && <BetModal onClose={() => setShowBetModal(false)} onBet={createBet} couple={couple} />}
       {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} />}
+      {showWelcomeModal && <WelcomeModal 
+        couple={couple} 
+        user={user} 
+        onClose={() => setShowWelcomeModal(false)}
+        onSendWelcome={sendWelcomeGift}
+      />}
     </div>
   )
 }
