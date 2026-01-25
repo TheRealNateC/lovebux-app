@@ -196,8 +196,7 @@ function MainApp({ user, onSignOut }) {
       to_user_id: partnerId,
       amount,
       reason,
-      type: 'gift',
-      balance_after: newBalance
+      type: 'gift'
     })
   }
 
@@ -218,8 +217,7 @@ function MainApp({ user, onSignOut }) {
         to_user_id: null,
         amount: -reward.cost,
         reason: `Redeemed: ${reward.name}`,
-        type: 'redemption',
-        balance_after: myBalance - reward.cost
+        type: 'redemption'
       })
 
       alert(`You redeemed ${reward.name}! 🎉`)
@@ -250,8 +248,7 @@ function MainApp({ user, onSignOut }) {
         to_user_id: winnerId,
         amount,
         reason: `Bet: ${description}`,
-        type: 'bet',
-        balance_after: winnerBalance + amount
+        type: 'bet'
       })
     }
   }
