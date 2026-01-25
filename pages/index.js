@@ -196,7 +196,8 @@ function MainApp({ user, onSignOut }) {
       to_user_id: partnerId,
       amount,
       reason,
-      type: 'gift'
+      type: 'gift',
+      balance_after: newBalance
     })
   }
 
@@ -217,7 +218,8 @@ function MainApp({ user, onSignOut }) {
         to_user_id: null,
         amount: -reward.cost,
         reason: `Redeemed: ${reward.name}`,
-        type: 'redemption'
+        type: 'redemption',
+        balance_after: myBalance - reward.cost
       })
 
       alert(`You redeemed ${reward.name}! 🎉`)
@@ -248,7 +250,8 @@ function MainApp({ user, onSignOut }) {
         to_user_id: winnerId,
         amount,
         reason: `Bet: ${description}`,
-        type: 'bet'
+        type: 'bet',
+        balance_after: winnerBalance + amount
       })
     }
   }
@@ -479,8 +482,15 @@ function MainApp({ user, onSignOut }) {
                       <p className="text-xs text-gray-400 mt-1">
                         {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
                       </p>
-                      <p className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {tx.amount > 0 ? '+' : ''}{tx.amount}
+                      <p className="flex items-center gap-2">
+                        <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {tx.amount > 0 ? '+' : ''}{tx.amount}
+                        </span>
+                        {tx.balance_after !== null && tx.balance_after !== undefined && (
+                          <span className="text-xs text-gray-400">
+                            → {tx.balance_after}
+                          </span>
+                        )}
                       </p>
                     </div>
                   ))
