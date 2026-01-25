@@ -244,15 +244,26 @@ function MainApp({ user, onSignOut }) {
         .eq('couple_id', couple.id)
         .eq('user_id', winnerId)
 
-      await supabase.from('transactions').insert({
-        couple_id: couple.id,
-        from_user_id: loserId,
-        to_user_id: winnerId,
-        amount,
-        reason: `Bet: ${description}`,
-        type: 'bet',
-        balance_after: winnerBalance + amount
-      })
+      await supabase.from('transactions').insert([
+        {
+          couple_id: couple.id,
+          from_user_id: loserId,
+          to_user_id: winnerId,
+          amount,
+          reason: `Bet Won: ${description}`,
+          type: 'bet',
+          balance_after: winnerBalance + amount
+        },
+        {
+          couple_id: couple.id,
+          from_user_id: loserId,
+          to_user_id: winnerId,
+          amount: -amount,
+          reason: `Bet Lost: ${description}`,
+          type: 'bet',
+          balance_after: loserBalance - amount
+        }
+      ])
     }
   }
 
