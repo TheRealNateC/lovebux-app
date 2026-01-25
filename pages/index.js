@@ -1278,44 +1278,43 @@ function WelcomeModal({ couple, user, onClose, onSendWelcome }) {
     )
   }
 
-  if (step === 3) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-          <div className="text-center">
-            <div className="text-5xl mb-3">🎁</div>
-            <h3 className="text-2xl font-bold mb-2 text-purple-600">Redeem Rewards</h3>
-            <p className="text-gray-600 mb-6">
-              Earn Lovebux by doing nice things for each other, then redeem them for rewards below!
-            </p>
+  // Step 3 or fallback
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+        <div className="text-center">
+          <div className="text-5xl mb-3">🎁</div>
+          <h3 className="text-2xl font-bold mb-2 text-purple-600">Redeem Rewards</h3>
+          <p className="text-gray-600 mb-6">
+            Earn Lovebux by doing nice things for each other, then redeem them for rewards below!
+          </p>
 
-            <div className="bg-purple-50 rounded-lg p-4 mb-6 text-left">
-              <h4 className="font-semibold text-purple-600 mb-3">How it works:</h4>
-              <ol className="space-y-2 text-sm text-gray-700">
-                <li className="flex items-start">
-                  <span className="font-bold text-purple-600 mr-2">1.</span>
-                  <span>Do something nice → Partner gives you Lovebux</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="font-bold text-purple-600 mr-2">2.</span>
-                  <span>Save up Lovebux in your balance</span>
-                </li>
-                <li className="flex items-start">
-                  <span className="font-bold text-purple-600 mr-2">3.</span>
-                  <span>Redeem for rewards when you have enough!</span>
-                </li>
-              </ol>
-            </div>
-
-            <button
-              onClick={onClose}
-              className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700"
-            >
-              Start Using Lovebux! 🚀
-            </button>
+          <div className="bg-purple-50 rounded-lg p-4 mb-6 text-left">
+            <h4 className="font-semibold text-purple-600 mb-3">How it works:</h4>
+            <ol className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-start">
+                <span className="font-bold text-purple-600 mr-2">1.</span>
+                <span>Do something nice → Partner gives you Lovebux</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-bold text-purple-600 mr-2">2.</span>
+                <span>Save up Lovebux in your balance</span>
+              </li>
+              <li className="flex items-start">
+                <span className="font-bold text-purple-600 mr-2">3.</span>
+                <span>Redeem for rewards when you have enough!</span>
+              </li>
+            </ol>
           </div>
+
+          <button
+            onClick={onClose}
+            className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-pink-600 hover:to-purple-700"
+          >
+            Start Using Lovebux! 🚀
+          </button>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
 }
