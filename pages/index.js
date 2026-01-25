@@ -486,7 +486,7 @@ function MainApp({ user, onSignOut }) {
                         <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {tx.amount > 0 ? '+' : ''}{tx.amount}
                         </span>
-                        {tx.balance_after !== null && tx.balance_after !== undefined && (
+                        {tx.balance_after != null && (
                           <span className="text-xs text-gray-400">
                             → {tx.balance_after}
                           </span>
