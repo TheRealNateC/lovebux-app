@@ -251,7 +251,8 @@ function MainApp({ user, onSignOut }) {
         amount,
         reason: `Bet: ${description}`,
         type: 'bet',
-        balance_after: winnerBalance + amount
+        balance_after: winnerBalance + amount,
+        loser_balance_after: loserBalance - amount
       })
     }
   }
@@ -476,24 +477,51 @@ function MainApp({ user, onSignOut }) {
                 {transactions.length === 0 ? (
                   <p className="text-center text-gray-400 py-8">No transactions yet. Start giving Lovebux!</p>
                 ) : (
-                  transactions.slice(0, 20).map(tx => (
-                    <div key={tx.id} className="border-l-4 border-pink-400 pl-4 py-2">
-                      <p className="font-semibold text-gray-800">{tx.reason}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.amount > 0 ? '+' : ''}{tx.amount}
-                        </span>
-                        {tx.balance_after !== null && tx.balance_after !== undefined && (
-                          <span className="text-xs text-gray-400">
-                            → {tx.balance_after}
-                          </span>
+                  transactions.slice(0, 20).map(tx => {
+                    const getNameById = (id) => {
+                      if (id === couple.partner1_id) return couple.partner1_name || 'Partner 1'
+                      if (id === couple.partner2_id) return couple.partner2_name || 'Partner 2'
+                      return 'Unknown'
+                    }
+
+                    return (
+                      <div key={tx.id} className="border-l-4 border-pink-400 pl-4 py-2">
+                        <p className="font-semibold text-gray-800">{tx.reason}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(tx.created_at).toLocaleDateString()} {new Date(tx.created_at).toLocaleTimeString()}
+                        </p>
+                        {tx.type === 'bet' ? (
+                          <div className="mt-1 space-y-1">
+                            <p className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">{getNameById(tx.to_user_id)}:</span>
+                              <span className="font-bold text-green-600">+{tx.amount}</span>
+                              {tx.balance_after != null && (
+                                <span className="text-xs text-gray-400">→ {tx.balance_after}</span>
+                              )}
+                            </p>
+                            <p className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">{getNameById(tx.from_user_id)}:</span>
+                              <span className="font-bold text-red-600">-{tx.amount}</span>
+                              {tx.loser_balance_after != null && (
+                                <span className="text-xs text-gray-400">→ {tx.loser_balance_after}</span>
+                              )}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="flex items-center gap-2">
+                            <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {tx.amount > 0 ? '+' : ''}{tx.amount}
+                            </span>
+                            {tx.balance_after != null && (
+                              <span className="text-xs text-gray-400">
+                                → {tx.balance_after}
+                              </span>
+                            )}
+                          </p>
                         )}
-                      </p>
-                    </div>
-                  ))
+                      </div>
+                    )
+                  })
                 )}
               </div>
             )}
