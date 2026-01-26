@@ -123,6 +123,12 @@ function MainApp({ user, onSignOut }) {
   const [showRewardModal, setShowRewardModal] = useState(false)
   const [showBetModal, setShowBetModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   useEffect(() => {
     loadData()
@@ -222,7 +228,7 @@ function MainApp({ user, onSignOut }) {
         balance_after: myBalance - reward.cost
       })
 
-      alert(`You redeemed ${reward.name}! 🎉`)
+      showToast(`You redeemed ${reward.name}!`, 'success')
     }
   }
 
@@ -299,7 +305,22 @@ function MainApp({ user, onSignOut }) {
             </button>
           </div>
 
-          {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} />}
+          {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} showToast={showToast} />}
+
+          {toast && (
+            <div className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 ${
+              toast.type === 'error' ? 'bg-red-500 text-white' :
+              toast.type === 'info' ? 'bg-blue-500 text-white' :
+              'bg-green-500 text-white'
+            }`}>
+              <div className="flex items-center gap-2">
+                <span>{toast.message}</span>
+                <button onClick={() => setToast(null)} className="ml-2 hover:opacity-80">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -548,7 +569,22 @@ function MainApp({ user, onSignOut }) {
       {showGiveModal && <GiveModal onClose={() => setShowGiveModal(false)} onGive={giveLovebux} />}
       {showRewardModal && <RewardModal onClose={() => setShowRewardModal(false)} coupleId={couple.id} />}
       {showBetModal && <BetModal onClose={() => setShowBetModal(false)} onBet={createBet} couple={couple} />}
-      {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} />}
+      {showSettingsModal && <SettingsModal user={user} couple={couple} onClose={() => setShowSettingsModal(false)} showToast={showToast} />}
+
+      {toast && (
+        <div className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 ${
+          toast.type === 'error' ? 'bg-red-500 text-white' :
+          toast.type === 'info' ? 'bg-blue-500 text-white' :
+          'bg-green-500 text-white'
+        }`}>
+          <div className="flex items-center gap-2">
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="ml-2 hover:opacity-80">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -760,7 +796,7 @@ function BetModal({ onClose, onBet, couple }) {
     </div>
   )
 }
-function SettingsModal({ user, couple, onClose }) {
+function SettingsModal({ user, couple, onClose, showToast }) {
   const [showCreateMode, setShowCreateMode] = useState(false)
   const [showJoinMode, setShowJoinMode] = useState(false)
   const [createName, setCreateName] = useState('')
@@ -769,12 +805,13 @@ function SettingsModal({ user, couple, onClose }) {
   const [copied, setCopied] = useState(false)
   const [editName, setEditName] = useState('')
   const [showEditName, setShowEditName] = useState(false)
+  const [showConfirmUnlink, setShowConfirmUnlink] = useState(false)
 
   const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase()
 
   const createCouple = async () => {
     if (!createName.trim()) {
-      alert('Please enter your name')
+      showToast('Please enter your name', 'error')
       return
     }
 
@@ -850,22 +887,22 @@ function SettingsModal({ user, couple, onClose }) {
       }
 
       onClose()
-      alert(`Relationship created! Code: ${newCode}`)
+      showToast(`Relationship created! Code: ${newCode}`, 'success')
       window.location.href = window.location.href
 
     } catch (error) {
-      alert('Error: ' + error.message)
+      showToast('Error: ' + error.message, 'error')
     }
   }
 
   const joinCouple = async () => {
     if (!joinName.trim()) {
-      alert('Please enter your name')
+      showToast('Please enter your name', 'error')
       return
     }
 
     if (!code || code.length !== 6) {
-      alert('Please enter a valid 6-character code')
+      showToast('Please enter a valid 6-character code', 'error')
       return
     }
 
@@ -878,7 +915,7 @@ function SettingsModal({ user, couple, onClose }) {
         .or(`partner1_id.eq.${user.id},partner2_id.eq.${user.id}`)
 
       if (existingRelationship && existingRelationship.length > 0) {
-        alert('You are already in a relationship. Unlink first.')
+        showToast('You are already in a relationship. Unlink first.', 'error')
         return
       }
 
@@ -888,19 +925,19 @@ function SettingsModal({ user, couple, onClose }) {
         .eq('pairing_code', upperCode)
 
       if (fetchError || !couples || couples.length === 0) {
-        alert('Invalid pairing code!')
+        showToast('Invalid pairing code!', 'error')
         return
       }
 
       const targetCouple = couples[0]
 
       if (targetCouple.partner2_id !== null) {
-        alert('Relationship already has both partners!')
+        showToast('Relationship already has both partners!', 'error')
         return
       }
 
       if (targetCouple.partner1_id === user.id) {
-        alert('Cannot join your own relationship!')
+        showToast('Cannot join your own relationship!', 'error')
         return
       }
 
@@ -921,16 +958,17 @@ function SettingsModal({ user, couple, onClose }) {
       })
 
       onClose()
-      alert('Successfully joined!')
+      showToast('Successfully joined!', 'success')
       window.location.href = window.location.href
 
     } catch (error) {
-      alert('Error: ' + error.message)
+      showToast('Error: ' + error.message, 'error')
     }
   }
 
   const unlinkRelationship = async () => {
-    if (!confirm('Are you sure you want to unlink from this relationship? This cannot be undone.')) {
+    if (!showConfirmUnlink) {
+      setShowConfirmUnlink(true)
       return
     }
 
@@ -971,11 +1009,11 @@ function SettingsModal({ user, couple, onClose }) {
       }
 
       onClose()
-      alert('Successfully unlinked')
+      showToast('Successfully unlinked', 'success')
       window.location.href = window.location.href
 
     } catch (error) {
-      alert('Error: ' + error.message)
+      showToast('Error: ' + error.message, 'error')
     }
   }
 
@@ -987,23 +1025,23 @@ function SettingsModal({ user, couple, onClose }) {
   
   const updateMyName = async (newName) => {
     if (!newName.trim()) {
-      alert('Please enter a name')
+      showToast('Please enter a name', 'error')
       return
     }
-  
+
     try {
       const isPartner1 = user.id === couple.partner1_id
       const field = isPartner1 ? 'partner1_name' : 'partner2_name'
-      
+
       await supabase
         .from('couples')
         .update({ [field]: newName.trim() })
         .eq('id', couple.id)
-  
-      alert('Name updated!')
+
+      showToast('Name updated!', 'success')
       window.location.href = window.location.href
     } catch (error) {
-      alert('Error updating name: ' + error.message)
+      showToast('Error updating name: ' + error.message, 'error')
     }
   }
   return (
@@ -1050,12 +1088,33 @@ function SettingsModal({ user, couple, onClose }) {
               Change My Name
             </button>
         
-            <button
-              onClick={unlinkRelationship}
-              className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
-            >
-              Unlink from Relationship
-            </button>
+            {!showConfirmUnlink ? (
+              <button
+                onClick={() => setShowConfirmUnlink(true)}
+                className="w-full bg-red-500 text-white py-3 rounded-lg font-semibold hover:bg-red-600"
+              >
+                Unlink from Relationship
+              </button>
+            ) : (
+              <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                <p className="text-red-800 font-semibold mb-3">Are you sure you want to unlink from this relationship?</p>
+                <p className="text-red-600 text-sm mb-4">This cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowConfirmUnlink(false)}
+                    className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={unlinkRelationship}
+                    className="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600"
+                  >
+                    Yes, Unlink
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         
