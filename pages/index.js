@@ -824,6 +824,7 @@ function SettingsModal({ user, couple, onClose }) {
         { name: 'Choose Next Meal Out', cost: 20, description: 'Pick the restaurant', category: 'Food' },
         { name: 'Breakfast in Bed', cost: 30, description: 'Get breakfast made and served', category: 'Food' },
         { name: 'Cook Favorite Meal', cost: 40, description: 'Partner makes your favorite dish', category: 'Food' },
+        { name: 'Sweet Treat', cost: 20, description: 'Sweet treat, please!', category: 'Food' },
         
         // Entertainment
         { name: 'Movie/TV Show Control', cost: 20, description: 'Control what you watch tonight', category: 'Entertainment' },
