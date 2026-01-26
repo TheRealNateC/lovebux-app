@@ -385,27 +385,27 @@ function MainApp({ user, onSignOut }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
           <button
             onClick={() => setShowGiveModal(true)}
-            className="bg-pink-500 text-white py-4 rounded-xl font-semibold hover:bg-pink-600 transition flex items-center justify-center gap-2"
+            className="bg-pink-500 text-white py-3 sm:py-4 px-2 rounded-xl font-semibold hover:bg-pink-600 transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
           >
             <Heart size={20} />
-            Give
+            <span className="text-xs sm:text-base">Give</span>
           </button>
           <button
             onClick={() => setShowBetModal(true)}
-            className="bg-blue-500 text-white py-4 rounded-xl font-semibold hover:bg-blue-600 transition flex items-center justify-center gap-2"
+            className="bg-blue-500 text-white py-3 sm:py-4 px-2 rounded-xl font-semibold hover:bg-blue-600 transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
           >
             <TrendingUp size={20} />
-            Bet
+            <span className="text-xs sm:text-base">Bet</span>
           </button>
           <button
             onClick={() => setShowRewardModal(true)}
-            className="bg-purple-500 text-white py-4 rounded-xl font-semibold hover:bg-purple-600 transition flex items-center justify-center gap-2"
+            className="bg-purple-500 text-white py-3 sm:py-4 px-2 rounded-xl font-semibold hover:bg-purple-600 transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
           >
             <Gift size={20} />
-            Add Reward
+            <span className="text-xs sm:text-base">Reward</span>
           </button>
         </div>
 
@@ -517,14 +517,14 @@ function MainApp({ user, onSignOut }) {
                               <span className="text-sm text-gray-600">{getNameById(tx.to_user_id)}:</span>
                               <span className="font-bold text-green-600">+{tx.amount}</span>
                               {tx.balance_after != null && (
-                                <span className="text-xs text-gray-400">→ {tx.balance_after}</span>
+                                <span className="text-xs text-gray-400">{tx.balance_after - tx.amount} → {tx.balance_after}</span>
                               )}
                             </p>
                             <p className="flex items-center gap-2">
                               <span className="text-sm text-gray-600">{getNameById(tx.from_user_id)}:</span>
                               <span className="font-bold text-red-600">-{tx.amount}</span>
                               {tx.loser_balance_after != null && (
-                                <span className="text-xs text-gray-400">→ {tx.loser_balance_after}</span>
+                                <span className="text-xs text-gray-400">{tx.loser_balance_after + tx.amount} → {tx.loser_balance_after}</span>
                               )}
                             </p>
                           </div>
@@ -533,7 +533,7 @@ function MainApp({ user, onSignOut }) {
                             <span className="text-sm text-gray-600">{getNameById(tx.to_user_id)}:</span>
                             <span className="font-bold text-green-600">+{tx.amount}</span>
                             {tx.balance_after != null && (
-                              <span className="text-xs text-gray-400">→ {tx.balance_after}</span>
+                              <span className="text-xs text-gray-400">{tx.balance_after - tx.amount} → {tx.balance_after}</span>
                             )}
                           </p>
                         ) : tx.type === 'redemption' ? (
@@ -541,7 +541,7 @@ function MainApp({ user, onSignOut }) {
                             <span className="text-sm text-gray-600">{getNameById(tx.from_user_id)}:</span>
                             <span className="font-bold text-red-600">{tx.amount}</span>
                             {tx.balance_after != null && (
-                              <span className="text-xs text-gray-400">→ {tx.balance_after}</span>
+                              <span className="text-xs text-gray-400">{tx.balance_after - tx.amount} → {tx.balance_after}</span>
                             )}
                           </p>
                         ) : (
@@ -551,7 +551,7 @@ function MainApp({ user, onSignOut }) {
                             </span>
                             {tx.balance_after != null && (
                               <span className="text-xs text-gray-400">
-                                → {tx.balance_after}
+                                {tx.balance_after - tx.amount} → {tx.balance_after}
                               </span>
                             )}
                           </p>
